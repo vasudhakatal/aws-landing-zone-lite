@@ -1,0 +1,37 @@
+# Checkov configuration. Run from the repo root:  checkov --config-file .checkov.yaml
+#
+# Every skipped check has a reason below. Skips are decisions for this small, single-account
+# demo, not blanket exceptions. In a production landing zone, revisit each one.
+
+framework:
+  - terraform
+directory:
+  - infra
+quiet: true
+compact: true
+
+skip-check:
+  # --- Key policy: resources "*" is how KMS key policies work (the policy attaches to the key) ---
+  - CKV_AWS_109 # Key policy must let the account root administer the key
+  - CKV_AWS_111 # CloudTrail needs kms:GenerateDataKey*, constrained by SourceArn and context
+  - CKV_AWS_356 # Also covers the checker's read-only list/describe calls, which have no resource-level support
+
+  # --- CloudTrail log bucket (the bucket that stores the audit logs) ---
+  - CKV_AWS_18 # Access logging for the log bucket itself would need a second bucket
+  - CKV_AWS_144 # Cross-region replication doubles storage cost; out of scope for a demo account
+  - CKV2_AWS_62 # No consumer for bucket event notifications
+  - CKV_AWS_252 # No SNS topic on the trail; the compliance checker covers alerting for this repo
+  - CKV2_AWS_10 # CloudWatch Logs integration adds cost; planned in the README roadmap
+
+  # --- CloudWatch log groups: default encryption at rest applies; a customer key adds cost ---
+  - CKV_AWS_158
+
+  # --- Lambda: a short scheduled, idempotent read-only job in a demo account ---
+  - CKV_AWS_115 # Reserved concurrency can fail in new accounts with low concurrency limits
+  - CKV_AWS_116 # Scheduled and idempotent; failures are visible in logs and retried next run
+  - CKV_AWS_117 # Needs public AWS APIs; a VPC would need NAT or endpoints (cost)
+  - CKV_AWS_272 # Code signing needs a signing profile; out of scope here
+  - CKV_AWS_173 # The only environment variable is a topic ARN, not a secret
+
+  # --- Network module ---
+  - CKV_AWS_394 # The region is a variable, so zone names cannot be pinned; the first N zones are used

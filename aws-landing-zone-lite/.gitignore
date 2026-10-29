@@ -1,0 +1,28 @@
+# Terraform: never commit state or real variable files (they can contain secrets and account IDs)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+crash.log
+infra/**/.build/
+# Commit .terraform.lock.hcl (it pins provider versions)
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store

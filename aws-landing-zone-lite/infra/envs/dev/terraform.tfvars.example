@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (which is git-ignored) and fill in.
+alert_email       = "you@example.com"
+github_repository = "vasudhakatal/aws-landing-zone-lite"
+
+# Optional
+# region                      = "ap-southeast-2"
+# monthly_budget_usd          = 10
+# create_github_oidc_provider = true   # set false if the account already has one
+# force_destroy_logs          = true   # demos only, so terraform destroy can empty the log bucket
+# create_network              = true
