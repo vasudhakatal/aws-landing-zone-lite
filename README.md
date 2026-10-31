@@ -16,11 +16,10 @@ This is a learning project for a single personal account, not a production landi
 | Terraform baseline: CloudTrail + KMS, encrypted log bucket, password policy, budget, GitHub OIDC | Written, formatted and Checkov-clean. Deploy and add screenshots. |
 | Terraform compliance-checker module: Lambda, EventBridge schedule, SNS, least-privilege role | Written, formatted and Checkov-clean. Deploy and add screenshots. |
 | Network module: VPC, public and private subnets, flow logs (off by default) | Written, formatted and Checkov-clean |
+| Monitoring: CloudWatch alarm on Lambda errors (own KMS-encrypted SNS topic) and a dashboard | Written, formatted and Checkov-clean. Deploy and add screenshots. |
 | CI: tests, lint, `terraform validate`, Checkov, secret scan | Done (check the Actions tab) |
 | AWS Organizations: OUs and service control policies | Planned (needs an organization management account) |
 | `terraform plan` on pull requests via the OIDC role (needs remote state) | Planned |
-
-<!-- TODO after deploying: add a screenshot of the SNS alert email and the CloudWatch log output -->
 
 ## Architecture
 
@@ -32,6 +31,7 @@ flowchart LR
     fn -->|read-only| iam[IAM users]
     fn --> sns[SNS topic] --> mail[Email alert]
     fn --> logs[CloudWatch Logs]
+    fn -.->|Errors metric| alarm[CloudWatch alarm] --> ops[SNS ops topic] --> mail2[Email alert]
 
     trail[CloudTrail, multi-region] --> kms[KMS key]
     trail --> bucket[(Encrypted, private log bucket)]
@@ -56,7 +56,7 @@ others still run and the failure is listed in the alert instead of being hidden.
 functions/compliance_checker/   Python code (checks.py, handler.py)
 functions/tests/                pytest tests using moto to simulate AWS (no real account needed)
 infra/modules/baseline/         CloudTrail, KMS, log bucket, password policy, budget, GitHub OIDC
-infra/modules/compliance-checker/  Lambda, schedule, SNS, least-privilege IAM role
+infra/modules/compliance-checker/  Lambda, schedule, SNS, least-privilege IAM role, error alarm, dashboard
 infra/modules/network/          VPC, subnets, routes, flow logs
 infra/envs/dev/                 The environment that wires the modules together
 docs/networking.md              Network design notes, including a hub-and-spoke diagram
@@ -88,7 +88,7 @@ an AWS account where you are happy to create these resources.
    terraform apply
    ```
 
-4. **Confirm the SNS subscription** from the email AWS sends, or you will not receive alerts.
+4. **Confirm both SNS subscriptions.** AWS sends two emails (one for compliance findings, one for the checker's own error alarm). Alerts do not arrive until each is confirmed.
 5. Commit the generated `.terraform.lock.hcl` file, which pins provider versions.
 6. Run the checker once without waiting for the schedule:
 
@@ -101,7 +101,7 @@ an AWS account where you are happy to create these resources.
 
 ## Cost and teardown
 
-Expect low cost, but check current AWS pricing yourself. A customer-managed KMS key is billed
+Expect low cost, but check current AWS pricing yourself. Customer-managed KMS keys (the CloudTrail key and the alert-topic key) are billed
 monthly, and CloudTrail storage, flow logs (if you enable the network module) and Lambda usage
 add small amounts. The Lambda runs once a day.
 
@@ -137,5 +137,5 @@ waiting period (7 days here), not immediately. Check the AWS billing page the ne
 1. Deploy, screenshot the alert and the CloudWatch logs, and add them to this README
 2. Remote state in S3, then `terraform plan` on pull requests using the OIDC role
 3. AWS Organizations: OUs and service control policies (deny leaving the region, deny disabling CloudTrail)
-4. CloudTrail to CloudWatch Logs, and an alarm on the Lambda's errors
+4. CloudTrail to CloudWatch Logs, with metric filters and alarms (a Lambda error alarm and a dashboard are done)
 5. Transit gateway hub-and-spoke example (see `docs/networking.md`)
